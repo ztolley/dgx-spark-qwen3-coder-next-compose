@@ -1,0 +1,30 @@
+name: DGX Spark Local
+version: 0.0.1
+schema: v1
+
+models:
+  - name: Qwen3 Coder Next Local
+    provider: vllm
+    model: Qwen/Qwen3-Coder-Next-FP8
+    apiBase: http://127.0.0.1:30000/v1
+    roles:
+      - chat
+      - edit
+      - apply
+    defaultCompletionOptions:
+      temperature: 0
+
+  - name: Qwen2.5 Coder 3B Local
+    provider: vllm
+    model: Qwen/Qwen2.5-Coder-3B
+    apiBase: http://127.0.0.1:30001/v1
+    roles:
+      - autocomplete
+
+context:
+  - provider: codebase
+  - provider: diff
+  - provider: file
+
+rules:
+  - Prefer concise, code-focused answers.

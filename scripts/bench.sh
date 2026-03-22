@@ -32,6 +32,7 @@ def get_json(url: str) -> dict:
 
 
 main_model = get_json("http://127.0.0.1:30000/v1/models")["data"][0]["id"]
+auto_model = get_json("http://127.0.0.1:30001/v1/models")["data"][0]["id"]
 long_prefix = "\n".join(
     [f"line_{i} = {i}" for i in range(1200)]
 ) + "\n\nExplain in 3 sentences what this file pattern suggests.\n"
@@ -75,13 +76,12 @@ bench["tests"].append(
     {
         "name": "autocomplete_short_completion",
         **post_json(
-            "http://127.0.0.1:30001/generate",
+            "http://127.0.0.1:30001/v1/completions",
             {
-                "text": "def fibonacci(n):\n    ",
-                "sampling_params": {
-                    "temperature": 0,
-                    "max_new_tokens": 48,
-                },
+                "model": auto_model,
+                "prompt": "def fibonacci(n):\n    ",
+                "temperature": 0,
+                "max_tokens": 48,
             },
         ),
     }

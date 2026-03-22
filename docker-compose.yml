@@ -62,7 +62,8 @@ services:
 
   qwen25-coder-autocomplete:
     <<: *common-gpu
-    image: ${AUTOCOMPLETE_IMAGE:-lmsysorg/sglang:spark}
+    image: ${AUTOCOMPLETE_IMAGE:-vllm-node:latest}
+    pull_policy: never
     container_name: qwen25-coder-autocomplete
     ports:
       - "${AUTOCOMPLETE_PORT:-30001}:30000"
@@ -70,27 +71,29 @@ services:
       <<: *common-hf-env
     volumes:
       - ${HOME}/.cache/huggingface:/root/.cache/huggingface
+      - ${HOME}/.cache/vllm:/root/.cache/vllm
+      - ${HOME}/.cache/flashinfer:/root/.cache/flashinfer
+      - ${HOME}/.triton:/root/.triton
       - /tmp:/tmp
     command:
       - bash
       - -lc
       - >-
-        python3 -m pip uninstall -y --break-system-packages hf-xet >/dev/null 2>&1 || true;
-        exec python3 -m sglang.launch_server
-        --model-path ${AUTOCOMPLETE_MODEL:-Qwen/Qwen2.5-Coder-1.5B}
+        unset VLLM_BASE_DIR &&
+        exec vllm serve ${AUTOCOMPLETE_MODEL:-Qwen/Qwen2.5-Coder-3B}
         --host 0.0.0.0
         --port 30000
-        --tp ${AUTOCOMPLETE_TP_SIZE:-1}
+        --gpu-memory-utilization ${AUTOCOMPLETE_GPU_MEMORY_UTILIZATION:-0.08}
+        --max-model-len ${AUTOCOMPLETE_MAX_MODEL_LEN:-4096}
+        --load-format fastsafetensors
         --attention-backend flashinfer
-        --mem-fraction-static ${AUTOCOMPLETE_MEM_FRACTION:-0.12}
-        --watchdog-timeout ${AUTOCOMPLETE_WATCHDOG_TIMEOUT:-1800}
-        --context-length ${AUTOCOMPLETE_CONTEXT_LENGTH:-4096}
+        --tensor-parallel-size ${AUTOCOMPLETE_TP_SIZE:-1}
     healthcheck:
       test:
         - CMD-SHELL
         - >-
           python3 -c "import urllib.request;
-          urllib.request.urlopen('http://127.0.0.1:30000/get_model_info', timeout=5).read()"
+          urllib.request.urlopen('http://127.0.0.1:30000/v1/models', timeout=5).read()"
       interval: 30s
       timeout: 10s
       retries: 10

@@ -33,11 +33,12 @@ def get_json(url: str) -> dict:
 
 
 main_models = get_json("http://127.0.0.1:30000/v1/models")
-auto_info = get_json("http://127.0.0.1:30001/get_model_info")
+auto_models = get_json("http://127.0.0.1:30001/v1/models")
 
 main_model = main_models["data"][0]["id"]
+auto_model = auto_models["data"][0]["id"]
 print(f"Main model: {main_model}")
-print(f"Autocomplete model: {auto_info['model_path']}")
+print(f"Autocomplete model: {auto_model}")
 
 main_reply = post_json(
     "http://127.0.0.1:30000/v1/chat/completions",
@@ -57,16 +58,15 @@ main_text = main_reply["choices"][0]["message"]["content"].strip()
 print(f"Main response: {main_text!r} in {main_reply['_elapsed_seconds']:.2f}s")
 
 auto_reply = post_json(
-    "http://127.0.0.1:30001/generate",
+    "http://127.0.0.1:30001/v1/completions",
     {
-        "text": "def add(a, b):\n    ",
-        "sampling_params": {
-            "temperature": 0,
-            "max_new_tokens": 16,
-        },
+        "model": auto_model,
+        "prompt": "def add(a, b):\n    ",
+        "temperature": 0,
+        "max_tokens": 32,
     },
 )
-auto_text = auto_reply["text"]
+auto_text = auto_reply["choices"][0]["text"]
 print(f"Autocomplete response: {auto_text!r} in {auto_reply['_elapsed_seconds']:.2f}s")
 
 if main_text != "OK":
