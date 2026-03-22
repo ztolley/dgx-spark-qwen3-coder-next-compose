@@ -1,0 +1,4 @@
+.cache/
+.results/
+*.log
+.env
