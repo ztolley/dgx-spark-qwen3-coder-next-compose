@@ -1,62 +1,74 @@
-# Qwen3-Coder-Next on DGX Spark
+# DGX Spark VS Code Coding Assistant
 
-This repo packages a tested DGX Spark setup for:
+This repo packages a working private coding-assistant stack for VS Code on a single NVIDIA DGX Spark.
 
-- `Qwen/Qwen3-Coder-Next-FP8` as the main coding assistant
-- `Qwen/Qwen2.5-Coder-3B` as an OpenAI-compatible autocomplete sidecar
+It is built around:
 
-Both services use a Spark-specific `vllm-node:latest` image built from `eugr/spark-vllm-docker`. The main service also applies the Qwen3-Coder-Next fixes in [`vllm-mods/fix-qwen3-coder-next`](./vllm-mods/fix-qwen3-coder-next). On this machine, that path proved more reliable than the stock `sglang:spark` image for the 80B FP8 model.
+- `Qwen/Qwen3-Coder-Next-FP8` as the main coding assistant for chat, edit, and agent-style work
+- `Qwen/Qwen2.5-Coder-3B` as a separate autocomplete model
+- `Continue` and `Cline` using OpenAI-compatible local endpoints
+- a Spark-tuned `vLLM` image that was actually validated on DGX Spark hardware
 
-## Why this layout
+If your priority is coding quality over raw speed, this is the best working setup we validated for `Qwen3-Coder-Next` on this box.
 
-- `Qwen3-Coder-Next` is the higher-quality coding assistant for Continue/Cline.
-- `vllm-node:latest` is the working Spark/Blackwell path we validated locally for this model.
-- `flashinfer` plus `--enable-prefix-caching` materially helps iterative coding workflows.
-- A separate `Qwen2.5-Coder-3B` autocomplete model gives better code completions than `1.5B` while still fitting beside the main assistant.
+## What This Repo Gives You
 
-## Tested result on this Spark
+- A `docker-compose.yml` that runs both the main assistant and a local autocomplete sidecar
+- Persistent local model caches so weights are not re-downloaded on every restart
+- A tested `Continue` config example in [`configs/continue-config.yaml`](./configs/continue-config.yaml)
+- A tested `Cline` setup guide in [`configs/cline-openai-compatible.md`](./configs/cline-openai-compatible.md)
+- Helper scripts to build, smoke-test, benchmark, and inspect the stack
+- A deeper write-up of the decisions and validation work in [`docs/validation-and-decisions.md`](./docs/validation-and-decisions.md)
 
-- Main model context: `32768`
-- Main model GPU memory target: `0.72`
-- Autocomplete context: `4096`
-- Autocomplete GPU memory target: `0.08`
-- Observed GPU memory with both services up:
-  - main model: about `89 GiB`
-  - autocomplete: about `13.5 GiB`
-- Host RAM remained healthy during validation, with about `14 GiB` still available.
+## Tested Target
 
-## Prerequisites
+This repo was validated on:
 
-- DGX Spark with current NVIDIA driver and container toolkit
+- NVIDIA DGX Spark
+- ARM64 host CPU
+- NVIDIA GB10 GPU
 - Docker Compose
-- Access to pull models from Hugging Face
-- Local `vllm-node:latest` image built first
+- NVIDIA driver `580.142`
 
-## Build the local vLLM image
+It is not an official turnkey NVIDIA recipe. It is a tested working path for this specific hardware and model combination.
+
+## Default Stack
+
+| Role | Model | Endpoint | Why |
+| --- | --- | --- | --- |
+| Main assistant | `Qwen/Qwen3-Coder-Next-FP8` | `http://localhost:30000/v1` | Best coding quality we validated for Continue/Cline-style work |
+| Autocomplete | `Qwen/Qwen2.5-Coder-3B` | `http://localhost:30001/v1` | Better fit and better short completions than `1.5B`, while still leaving headroom for the main model |
+
+## Quick Start
+
+### 1. Prerequisites
+
+- A DGX Spark with Docker and GPU container support working
+- Access to pull models from Hugging Face
+- Enough local disk space for model caches and compile artifacts
+
+### 2. Build the local Spark-tuned `vLLM` image
 
 ```bash
 ./scripts/build-vllm-image.sh
 ```
 
-By default this builds the tested `eugr/spark-vllm-docker` commit:
+By default the build script uses the tested `eugr/spark-vllm-docker` commit documented in the script.
 
-- repo: `https://github.com/eugr/spark-vllm-docker.git`
-- ref: `2d749742e410a9467ca44cab354056e86015b6e8`
-
-## Start the services
+### 3. Start the services
 
 ```bash
 docker compose up -d
 ```
 
-Watch startup:
+### 4. Watch startup if you want to monitor the first load
 
 ```bash
 docker compose logs -f qwen3-coder-next
 docker compose logs -f qwen25-coder-autocomplete
 ```
 
-## Validate the deployment
+### 5. Validate the deployment
 
 Smoke-test both endpoints:
 
@@ -64,50 +76,120 @@ Smoke-test both endpoints:
 ./scripts/smoke-test.sh
 ```
 
-Run a small benchmark and capture a system snapshot:
+Run a small benchmark:
 
 ```bash
 ./scripts/bench.sh
 ```
 
-## Useful overrides
-
-These are optional. The compose file already has sane defaults.
+Capture a quick system snapshot:
 
 ```bash
-MAIN_MAX_MODEL_LEN=24576 docker compose up -d qwen3-coder-next
-AUTOCOMPLETE_MODEL=Qwen/Qwen2.5-Coder-1.5B docker compose up -d qwen25-coder-autocomplete
+./scripts/system-snapshot.sh
 ```
 
-Default ports:
+## VS Code Setup
 
-- main assistant: `http://localhost:30000/v1`
-- autocomplete: `http://localhost:30001`
+### Continue
 
-## Continue and Cline
+Use the example config in [`configs/continue-config.yaml`](./configs/continue-config.yaml).
 
-Use the main service as your chat/agent model:
+Model split:
 
-- base URL: `http://<spark-host>:30000/v1`
-- model: `Qwen/Qwen3-Coder-Next-FP8`
+- `Qwen3-Coder-Next-FP8` for `chat`, `edit`, and `apply`
+- `Qwen2.5-Coder-3B` for `autocomplete`
 
-Use the autocomplete service separately:
+### Cline
 
-- base URL: `http://<spark-host>:30001/v1`
-- model: `Qwen/Qwen2.5-Coder-3B`
-- Continue config example: [`configs/continue-config.yaml`](./configs/continue-config.yaml)
-- Cline setup guide: [`configs/cline-openai-compatible.md`](./configs/cline-openai-compatible.md)
-- A matching Continue config was also written locally to `~/.continue/config.yaml`
+Use the values in [`configs/cline-openai-compatible.md`](./configs/cline-openai-compatible.md).
 
-## Notes on efficiency
+Recommended split:
 
-For this exact box, this is the best practical path we validated for `Qwen3-Coder-Next`:
+- Use `Cline` for the main coding-agent workflow
+- Use `Continue` for inline autocomplete
 
-- stock Spark `SGLang` was not stable for the main model on GB10/Blackwell in our testing
-- the Spark-tuned community `vLLM` build worked and handled the full `32k` context
-- `Qwen2.5-Coder-3B` under `vLLM` was the best autocomplete tradeoff we found that both fit on the Spark and matched Continue's preferred `vLLM` integration path
-- NVIDIA's official Spark docs now list DGX Spark support in vLLM, but `Qwen3-Coder-Next` is still not in the official Spark support matrix, so this remains a tested best-known path rather than an official NVIDIA turnkey recipe
+## Current Defaults
 
-## Published model caches
+| Setting | Value |
+| --- | --- |
+| Main context | `32768` |
+| Main GPU memory target | `0.72` |
+| Main KV cache dtype | `fp8` |
+| Main attention backend | `flashinfer` |
+| Autocomplete context | `4096` |
+| Autocomplete GPU memory target | `0.08` |
 
-Model weights are persisted in host caches under `${HOME}/.cache`, so restarts do not need a full re-download.
+## Performance Snapshot
+
+These are recent spot-check numbers from the current default stack on the test DGX Spark:
+
+- Smoke test: main model returned `OK` in `0.93s`
+- Smoke test: autocomplete returned a non-empty code completion in `2.65s`
+- Bench: main coldish prompt `7.97s`
+- Bench: main repeated prompt with prefix caching `2.37s`
+- Bench: autocomplete short completion `1.56s`
+- Observed GPU memory: main model about `88.8 GiB`
+- Observed GPU memory: autocomplete about `11.0 GiB`
+- Observed host memory available during the benchmark: about `15 GiB`
+
+## Context Guidance
+
+The default is `32k`, not because `40k` is impossible, but because `32k` is the better everyday tradeoff on a single Spark once you also keep autocomplete online.
+
+What we validated:
+
+- `32k` is stable with the current two-model setup
+- `40k` is feasible on this hardware
+- For very large application-wide refactors, it is still better to split the repo into sections and synthesize the results than to keep pushing context higher by default
+
+That approach keeps the day-to-day interactive workflow faster and leaves more headroom for autocomplete and runtime stability.
+
+## Useful Overrides
+
+These are optional. The repo defaults are the tested settings.
+
+```bash
+MAIN_MAX_MODEL_LEN=40960 docker compose up -d qwen3-coder-next
+AUTOCOMPLETE_MODEL=Qwen/Qwen2.5-Coder-7B docker compose up -d qwen25-coder-autocomplete
+```
+
+If you experiment with `7B` autocomplete, read the notes in [`docs/validation-and-decisions.md`](./docs/validation-and-decisions.md) first. It does fit on this box with `vLLM`, but it was slower and not clearly better enough to replace `3B` as the default.
+
+## Caches And Persistence
+
+Model weights and related caches are persisted on the host under:
+
+- `${HOME}/.cache/huggingface`
+- `${HOME}/.cache/vllm`
+- `${HOME}/.cache/flashinfer`
+- `${HOME}/.triton`
+
+That means container restarts do not require full model re-downloads or full compile warmup from scratch every time.
+
+## Why This Repo Uses This Path
+
+The short version:
+
+- `Qwen3-Coder-Next` was the highest-priority model because coding quality mattered most
+- Stock Spark `SGLang` was not the best path for this main model in local testing
+- A Spark-tuned `vLLM` image worked reliably on the DGX Spark for this workload
+- `Qwen2.5-Coder-3B` was the best autocomplete tradeoff we found for the shared box
+
+The full reasoning, compatibility notes, and measured comparisons live in [`docs/validation-and-decisions.md`](./docs/validation-and-decisions.md).
+
+## Repository Layout
+
+- [`docker-compose.yml`](./docker-compose.yml): main deployment
+- [`scripts/build-vllm-image.sh`](./scripts/build-vllm-image.sh): builds the tested Spark-tuned `vLLM` image
+- [`scripts/smoke-test.sh`](./scripts/smoke-test.sh): quick end-to-end validation
+- [`scripts/bench.sh`](./scripts/bench.sh): simple performance spot checks
+- [`scripts/system-snapshot.sh`](./scripts/system-snapshot.sh): runtime resource snapshot
+- [`configs/continue-config.yaml`](./configs/continue-config.yaml): example Continue config
+- [`configs/cline-openai-compatible.md`](./configs/cline-openai-compatible.md): Cline setup notes
+- [`docs/validation-and-decisions.md`](./docs/validation-and-decisions.md): technical notes and rationale
+
+## Caveats
+
+- This repo is based on real validation, not an official support statement from NVIDIA, Qwen, Continue, or Cline.
+- The main model path depends on a locally built Spark-tuned `vLLM` image.
+- The numbers in this repo are practical spot checks for a coding-assistant workflow, not a formal benchmark suite.
