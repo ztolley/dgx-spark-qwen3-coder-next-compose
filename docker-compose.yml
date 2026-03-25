@@ -60,6 +60,56 @@ services:
       start_period: 30m
     stop_grace_period: 10m
 
+  qwen3-coder-next-int4:
+    <<: *common-gpu
+    profiles:
+      - int4
+    image: ${MAIN_INT4_IMAGE:-vllm-node:latest}
+    pull_policy: never
+    container_name: qwen3-coder-next-int4
+    ports:
+      - "${MAIN_PORT:-30000}:30000"
+    environment:
+      <<: *common-hf-env
+    volumes:
+      - ${HOME}/.cache/huggingface:/root/.cache/huggingface
+      - ${HOME}/.cache/vllm:/root/.cache/vllm
+      - ${HOME}/.cache/flashinfer:/root/.cache/flashinfer
+      - ${HOME}/.triton:/root/.triton
+      - ./vllm-mods/fix-qwen3-coder-next:/opt/qwen3-coder-next-fix:ro
+      - /tmp:/tmp
+    command:
+      - bash
+      - -lc
+      - >-
+        unset VLLM_BASE_DIR &&
+        cd /opt/qwen3-coder-next-fix &&
+        ./run.sh &&
+        exec vllm serve ${MAIN_INT4_MODEL:-Intel/Qwen3-Coder-Next-int4-AutoRound}
+        --enable-auto-tool-choice
+        --tool-call-parser qwen3_coder
+        --trust-remote-code
+        --dtype bfloat16
+        --gpu-memory-utilization ${MAIN_INT4_GPU_MEMORY_UTILIZATION:-0.72}
+        --host 0.0.0.0
+        --port 30000
+        --kv-cache-dtype fp8
+        --attention-backend flashinfer
+        --enable-prefix-caching
+        --max-model-len ${MAIN_INT4_MAX_MODEL_LEN:-32768}
+        --tensor-parallel-size ${MAIN_INT4_TP_SIZE:-1}
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          python3 -c "import urllib.request;
+          urllib.request.urlopen('http://127.0.0.1:30000/v1/models', timeout=5).read()"
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 30m
+    stop_grace_period: 10m
+
   qwen25-coder-autocomplete:
     <<: *common-gpu
     image: ${AUTOCOMPLETE_IMAGE:-vllm-node:latest}

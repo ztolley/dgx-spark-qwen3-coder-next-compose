@@ -14,6 +14,7 @@ If your priority is coding quality over raw speed, this is the best working setu
 ## What This Repo Gives You
 
 - A `docker-compose.yml` that runs both the main assistant and a local autocomplete sidecar
+- An optional `INT4` variant of the main service for side-by-side evaluation without changing the default startup path
 - Persistent local model caches so weights are not re-downloaded on every restart
 - A tested `Continue` config example in [`configs/continue-config.yaml`](./configs/continue-config.yaml)
 - A tested `Cline` setup guide in [`configs/cline-openai-compatible.md`](./configs/cline-openai-compatible.md)
@@ -65,6 +66,8 @@ By default the build script uses the tested `eugr/spark-vllm-docker` commit docu
 docker compose up -d
 ```
 
+The default startup path keeps the `FP8` main model as the only main-assistant service. An `INT4` comparison service is defined, but it is behind the `int4` profile and does not start unless you explicitly ask for it.
+
 ### 4. Watch startup if you want to monitor the first load
 
 ```bash
@@ -90,6 +93,18 @@ Capture a quick system snapshot:
 
 ```bash
 ./scripts/system-snapshot.sh
+```
+
+Run Spark Arena-style throughput checks:
+
+```bash
+./scripts/bench-llama-benchy.sh
+```
+
+Run the small coding-quality harness:
+
+```bash
+./scripts/eval-quality.py
 ```
 
 ## VS Code Setup
@@ -155,6 +170,25 @@ These are optional. The repo defaults are the tested settings.
 ```bash
 MAIN_MAX_MODEL_LEN=40960 docker compose up -d qwen3-coder-next
 AUTOCOMPLETE_MODEL=Qwen/Qwen2.5-Coder-7B docker compose up -d qwen25-coder-autocomplete
+```
+
+To compare `FP8` and `INT4` on the same box, keep the default `FP8` service stopped before starting the `INT4` profile because they share the same host port and the same GPU budget:
+
+```bash
+docker compose stop qwen3-coder-next
+docker compose --profile int4 up -d qwen3-coder-next-int4
+./scripts/bench.sh
+./scripts/bench-llama-benchy.sh
+./scripts/eval-quality.py
+```
+
+You can tune the alternate lane independently with:
+
+```bash
+MAIN_INT4_MODEL=Intel/Qwen3-Coder-Next-int4-AutoRound \
+MAIN_INT4_MAX_MODEL_LEN=32768 \
+MAIN_INT4_GPU_MEMORY_UTILIZATION=0.72 \
+docker compose --profile int4 up -d qwen3-coder-next-int4
 ```
 
 If you experiment with `7B` autocomplete, read the notes in [`docs/validation-and-decisions.md`](./docs/validation-and-decisions.md) first. It does fit on this box with `vLLM`, but it was slower and not clearly better enough to replace `3B` as the default.
