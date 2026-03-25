@@ -223,8 +223,11 @@ The full reasoning, compatibility notes, and measured comparisons live in [`docs
 - [`scripts/bench.sh`](./scripts/bench.sh): simple performance spot checks
 - [`scripts/bench-llama-benchy.sh`](./scripts/bench-llama-benchy.sh): Spark Arena-style benchmark wrapper
 - [`scripts/eval-quality.py`](./scripts/eval-quality.py): small coding-quality regression harness
+- [`scripts/run-repoqa.py`](./scripts/run-repoqa.py): bounded RepoQA runner for codebase-understanding comparisons
+- [`scripts/run-aider-refactor-benchmark.py`](./scripts/run-aider-refactor-benchmark.py): bounded Aider refactor benchmark runner
 - [`scripts/system-snapshot.sh`](./scripts/system-snapshot.sh): runtime resource snapshot
 - [`evals/coding_tasks.json`](./evals/coding_tasks.json): task set used by the quality harness
+- [`evals/aider-refactor-sample.txt`](./evals/aider-refactor-sample.txt): deterministic refactor sample used by the benchmark runner
 - [`configs/continue-config.yaml`](./configs/continue-config.yaml): example Continue config
 - [`configs/cline-openai-compatible.md`](./configs/cline-openai-compatible.md): Cline setup notes
 - [`docs/validation-and-decisions.md`](./docs/validation-and-decisions.md): technical notes and rationale
