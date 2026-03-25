@@ -23,7 +23,6 @@ services:
     environment:
       <<: *common-hf-env
       VLLM_MARLIN_USE_ATOMIC_ADD: ${MAIN_VLLM_MARLIN_USE_ATOMIC_ADD:-"1"}
-      VLLM_SLEEP_WHEN_IDLE: ${MAIN_VLLM_SLEEP_WHEN_IDLE:-"0"}
     volumes:
       - ${HOME}/.cache/huggingface:/root/.cache/huggingface
       - ${HOME}/.cache/vllm:/root/.cache/vllm
