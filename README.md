@@ -21,9 +21,14 @@ If your priority is coding quality over raw speed, this is the best working setu
 - Helper scripts to build, smoke-test, benchmark, and inspect the stack
 - A `llama-benchy` wrapper for Spark Arena-style throughput checks
 - A small coding-quality evaluation harness for repeatable model comparisons
+- A bounded `RepoQA` runner for codebase-understanding checks
+- A bounded `Aider` refactor runner for edit-quality checks
+- A bounded `Aider polyglot` runner for feature-from-description checks
+- A bounded `SWE-bench Lite` predictions runner plus official-harness evaluation wrapper
 - A deeper write-up of the decisions and validation work in [`docs/validation-and-decisions.md`](./docs/validation-and-decisions.md)
 - A Spark Arena follow-up analysis in [`docs/spark-arena-analysis.md`](./docs/spark-arena-analysis.md)
 - A comparison plan for `FP8` vs `INT4` in [`docs/fp8-vs-int4-comparison-plan.md`](./docs/fp8-vs-int4-comparison-plan.md)
+- A broader benchmark matrix in [`docs/benchmark-suite.md`](./docs/benchmark-suite.md)
 
 ## Tested Target
 
@@ -107,6 +112,16 @@ Run the small coding-quality harness:
 ./scripts/eval-quality.py
 ```
 
+Run the broader benchmark suite:
+
+```bash
+./scripts/run-repoqa.py
+./scripts/run-aider-refactor-benchmark.py
+./scripts/run-aider-polyglot-benchmark.py
+./scripts/run-swebench-lite.py
+./scripts/run-swebench-lite-eval.py --predictions-path .results/swebench-lite-predictions.jsonl
+```
+
 ## VS Code Setup
 
 ### Continue
@@ -180,6 +195,11 @@ docker compose --profile int4 up -d qwen3-coder-next-int4
 ./scripts/bench.sh
 ./scripts/bench-llama-benchy.sh
 ./scripts/eval-quality.py
+./scripts/run-repoqa.py
+./scripts/run-aider-refactor-benchmark.py
+./scripts/run-aider-polyglot-benchmark.py
+./scripts/run-swebench-lite.py
+./scripts/run-swebench-lite-eval.py --predictions-path .results/swebench-lite-predictions.jsonl
 ```
 
 You can tune the alternate lane independently with:
@@ -225,14 +245,20 @@ The full reasoning, compatibility notes, and measured comparisons live in [`docs
 - [`scripts/eval-quality.py`](./scripts/eval-quality.py): small coding-quality regression harness
 - [`scripts/run-repoqa.py`](./scripts/run-repoqa.py): bounded RepoQA runner for codebase-understanding comparisons
 - [`scripts/run-aider-refactor-benchmark.py`](./scripts/run-aider-refactor-benchmark.py): bounded Aider refactor benchmark runner
+- [`scripts/run-aider-polyglot-benchmark.py`](./scripts/run-aider-polyglot-benchmark.py): bounded Aider polyglot runner for feature implementation
+- [`scripts/run-swebench-lite.py`](./scripts/run-swebench-lite.py): bounded SWE-bench Lite predictions runner using BM25 prompts
+- [`scripts/run-swebench-lite-eval.py`](./scripts/run-swebench-lite-eval.py): wrapper for the official SWE-bench evaluation harness
 - [`scripts/system-snapshot.sh`](./scripts/system-snapshot.sh): runtime resource snapshot
 - [`evals/coding_tasks.json`](./evals/coding_tasks.json): task set used by the quality harness
 - [`evals/aider-refactor-sample.txt`](./evals/aider-refactor-sample.txt): deterministic refactor sample used by the benchmark runner
+- [`evals/aider-polyglot-python-sample.txt`](./evals/aider-polyglot-python-sample.txt): deterministic Aider polyglot Python sample
+- [`evals/swebench-lite-sample.txt`](./evals/swebench-lite-sample.txt): deterministic SWE-bench Lite sample
 - [`configs/continue-config.yaml`](./configs/continue-config.yaml): example Continue config
 - [`configs/cline-openai-compatible.md`](./configs/cline-openai-compatible.md): Cline setup notes
 - [`docs/validation-and-decisions.md`](./docs/validation-and-decisions.md): technical notes and rationale
 - [`docs/spark-arena-analysis.md`](./docs/spark-arena-analysis.md): ecosystem analysis and recommendations
 - [`docs/fp8-vs-int4-comparison-plan.md`](./docs/fp8-vs-int4-comparison-plan.md): comparison and promotion criteria
+- [`docs/benchmark-suite.md`](./docs/benchmark-suite.md): expanded benchmark matrix and NVFP4 notes
 
 ## Caveats
 

@@ -1,0 +1,8 @@
+affine-cipher
+beer-song
+book-store
+dominoes
+grade-school
+phone-number
+poker
+pov
