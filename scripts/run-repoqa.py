@@ -31,12 +31,11 @@ def run(cmd: list[str], env: dict[str, str] | None = None) -> None:
 def ensure_repoqa_venv(venv_dir: Path) -> Path:
     python_bin = venv_dir / "bin" / "python"
     repoqa_bin = venv_dir / "bin" / "repoqa.search_needle_function"
-    if python_bin.exists() and repoqa_bin.exists():
-        return python_bin
-
-    run([sys.executable, "-m", "venv", str(venv_dir)])
-    run([str(python_bin), "-m", "pip", "install", "--upgrade", "pip"])
-    run([str(python_bin), "-m", "pip", "install", "repoqa==0.1.2"])
+    if not (python_bin.exists() and repoqa_bin.exists()):
+        run([sys.executable, "-m", "venv", str(venv_dir)])
+        run([str(python_bin), "-m", "pip", "install", "--upgrade", "pip"])
+        run([str(python_bin), "-m", "pip", "install", "repoqa==0.1.2"])
+    run([str(python_bin), "-m", "pip", "install", "tree_sitter==0.21.3"])
     return python_bin
 
 
