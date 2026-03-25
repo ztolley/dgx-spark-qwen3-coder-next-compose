@@ -46,6 +46,7 @@ def build_subset_dataset(
     languages: list[str],
     repos_per_language: int,
     needles_per_repo: int,
+    env: dict[str, str],
 ) -> None:
     script = """
 import json
@@ -82,7 +83,8 @@ Path(sys.argv[1]).write_text(json.dumps(subset))
             ",".join(languages),
             str(repos_per_language),
             str(needles_per_repo),
-        ]
+        ],
+        env=env,
     )
 
 
@@ -103,6 +105,13 @@ def main() -> int:
     languages = [lang.strip() for lang in args.languages.split(",") if lang.strip()]
     result_dir = Path(args.result_dir)
     result_dir.mkdir(parents=True, exist_ok=True)
+    hf_home = result_dir / ".hf-home"
+    hf_home.mkdir(parents=True, exist_ok=True)
+    env = os.environ.copy()
+    env.setdefault("HF_HOME", str(hf_home))
+    env.setdefault("HUGGINGFACE_HUB_CACHE", str(hf_home / "hub"))
+    env.setdefault("TRANSFORMERS_CACHE", str(hf_home / "transformers"))
+    env.setdefault("HF_HUB_DISABLE_XET", "1")
 
     venv_dir = Path(args.venv_dir)
     python_bin = ensure_repoqa_venv(venv_dir)
@@ -116,6 +125,7 @@ def main() -> int:
         languages=languages,
         repos_per_language=args.repos_per_language,
         needles_per_repo=args.needles_per_repo,
+        env=env,
     )
 
     run(
@@ -135,7 +145,8 @@ def main() -> int:
             str(args.max_new_tokens),
             "--result-dir",
             str(result_dir),
-        ]
+        ],
+        env=env,
     )
 
     score_path = result_dir / f"ntoken_{args.code_context_size}" / f"{model_slug}-SCORES.json"
