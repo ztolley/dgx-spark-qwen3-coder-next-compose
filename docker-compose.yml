@@ -22,57 +22,8 @@ services:
       - "${MAIN_PORT:-30000}:30000"
     environment:
       <<: *common-hf-env
-    volumes:
-      - ${HOME}/.cache/huggingface:/root/.cache/huggingface
-      - ${HOME}/.cache/vllm:/root/.cache/vllm
-      - ${HOME}/.cache/flashinfer:/root/.cache/flashinfer
-      - ${HOME}/.triton:/root/.triton
-      - ./vllm-mods/fix-qwen3-coder-next:/opt/qwen3-coder-next-fix:ro
-      - /tmp:/tmp
-    command:
-      - bash
-      - -lc
-      - >-
-        unset VLLM_BASE_DIR &&
-        cd /opt/qwen3-coder-next-fix &&
-        ./run.sh &&
-        exec vllm serve ${MAIN_MODEL:-Qwen/Qwen3-Coder-Next-FP8}
-        --enable-auto-tool-choice
-        --tool-call-parser qwen3_coder
-        --gpu-memory-utilization ${MAIN_GPU_MEMORY_UTILIZATION:-0.72}
-        --host 0.0.0.0
-        --port 30000
-        --kv-cache-dtype fp8
-        --load-format fastsafetensors
-        --attention-backend flashinfer
-        --enable-prefix-caching
-        --max-model-len ${MAIN_MAX_MODEL_LEN:-32768}
-        --tensor-parallel-size ${MAIN_TP_SIZE:-1}
-    healthcheck:
-      test:
-        - CMD-SHELL
-        - >-
-          python3 -c "import urllib.request;
-          urllib.request.urlopen('http://127.0.0.1:30000/v1/models', timeout=5).read()"
-      interval: 30s
-      timeout: 10s
-      retries: 10
-      start_period: 30m
-    stop_grace_period: 10m
-
-  qwen3-coder-next-int4:
-    <<: *common-gpu
-    profiles:
-      - int4
-    image: ${MAIN_INT4_IMAGE:-vllm-node:latest}
-    pull_policy: never
-    container_name: qwen3-coder-next-int4
-    ports:
-      - "${MAIN_PORT:-30000}:30000"
-    environment:
-      <<: *common-hf-env
-      VLLM_MARLIN_USE_ATOMIC_ADD: ${MAIN_INT4_VLLM_MARLIN_USE_ATOMIC_ADD:-"1"}
-      VLLM_SLEEP_WHEN_IDLE: ${MAIN_INT4_VLLM_SLEEP_WHEN_IDLE:-"0"}
+      VLLM_MARLIN_USE_ATOMIC_ADD: ${MAIN_VLLM_MARLIN_USE_ATOMIC_ADD:-"1"}
+      VLLM_SLEEP_WHEN_IDLE: ${MAIN_VLLM_SLEEP_WHEN_IDLE:-"0"}
     volumes:
       - ${HOME}/.cache/huggingface:/root/.cache/huggingface
       - ${HOME}/.cache/vllm:/root/.cache/vllm
@@ -90,25 +41,74 @@ services:
         ./run.sh &&
         cd /opt/qwen3-next-autoround-fix &&
         ./run.sh &&
-        exec vllm serve ${MAIN_INT4_MODEL:-Intel/Qwen3-Coder-Next-int4-AutoRound}
+        exec vllm serve ${MAIN_MODEL:-Intel/Qwen3-Coder-Next-int4-AutoRound}
         --enable-auto-tool-choice
         --tool-call-parser qwen3_coder
         --dtype bfloat16
-        --gpu-memory-utilization ${MAIN_INT4_GPU_MEMORY_UTILIZATION:-0.70}
+        --gpu-memory-utilization ${MAIN_GPU_MEMORY_UTILIZATION:-0.70}
         --host 0.0.0.0
         --port 30000
-        --load-format fastsafetensors
         --kv-cache-dtype fp8
+        --load-format fastsafetensors
         --attention-backend flashinfer
         --enable-prefix-caching
         --enable-chunked-prefill
-        --max-model-len ${MAIN_INT4_MAX_MODEL_LEN:-32768}
-        --max-num-seqs ${MAIN_INT4_MAX_NUM_SEQS:-128}
-        --max-num-batched-tokens ${MAIN_INT4_MAX_NUM_BATCHED_TOKENS:-16384}
-        --optimization-level ${MAIN_INT4_OPTIMIZATION_LEVEL:-3}
-        --performance-mode ${MAIN_INT4_PERFORMANCE_MODE:-throughput}
-        --mamba-cache-mode ${MAIN_INT4_MAMBA_CACHE_MODE:-align}
-        --tensor-parallel-size ${MAIN_INT4_TP_SIZE:-1}
+        --max-model-len ${MAIN_MAX_MODEL_LEN:-65536}
+        --max-num-seqs ${MAIN_MAX_NUM_SEQS:-128}
+        --max-num-batched-tokens ${MAIN_MAX_NUM_BATCHED_TOKENS:-16384}
+        --optimization-level ${MAIN_OPTIMIZATION_LEVEL:-3}
+        --performance-mode ${MAIN_PERFORMANCE_MODE:-throughput}
+        --mamba-cache-mode ${MAIN_MAMBA_CACHE_MODE:-align}
+        --tensor-parallel-size ${MAIN_TP_SIZE:-1}
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          python3 -c "import urllib.request;
+          urllib.request.urlopen('http://127.0.0.1:30000/v1/models', timeout=5).read()"
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 30m
+    stop_grace_period: 10m
+
+  qwen3-coder-next-fp8:
+    <<: *common-gpu
+    profiles:
+      - fp8
+    image: ${MAIN_FP8_IMAGE:-vllm-node:latest}
+    pull_policy: never
+    container_name: qwen3-coder-next-fp8
+    ports:
+      - "${MAIN_PORT:-30000}:30000"
+    environment:
+      <<: *common-hf-env
+    volumes:
+      - ${HOME}/.cache/huggingface:/root/.cache/huggingface
+      - ${HOME}/.cache/vllm:/root/.cache/vllm
+      - ${HOME}/.cache/flashinfer:/root/.cache/flashinfer
+      - ${HOME}/.triton:/root/.triton
+      - ./vllm-mods/fix-qwen3-coder-next:/opt/qwen3-coder-next-fix:ro
+      - /tmp:/tmp
+    command:
+      - bash
+      - -lc
+      - >-
+        unset VLLM_BASE_DIR &&
+        cd /opt/qwen3-coder-next-fix &&
+        ./run.sh &&
+        exec vllm serve ${MAIN_FP8_MODEL:-Qwen/Qwen3-Coder-Next-FP8}
+        --enable-auto-tool-choice
+        --tool-call-parser qwen3_coder
+        --gpu-memory-utilization ${MAIN_FP8_GPU_MEMORY_UTILIZATION:-0.72}
+        --host 0.0.0.0
+        --port 30000
+        --kv-cache-dtype fp8
+        --load-format fastsafetensors
+        --attention-backend flashinfer
+        --enable-prefix-caching
+        --max-model-len ${MAIN_FP8_MAX_MODEL_LEN:-32768}
+        --tensor-parallel-size ${MAIN_FP8_TP_SIZE:-1}
     healthcheck:
       test:
         - CMD-SHELL
