@@ -118,6 +118,14 @@ def main() -> int:
     from datasets import load_dataset
 
     model = args.model or detect_model(args.base_url)
+    output_path = Path(args.output)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    hf_home = output_path.parent / ".hf-home"
+    hf_home.mkdir(parents=True, exist_ok=True)
+    os.environ.setdefault("HF_HOME", str(hf_home))
+    os.environ.setdefault("HUGGINGFACE_HUB_CACHE", str(hf_home / "hub"))
+    os.environ.setdefault("TRANSFORMERS_CACHE", str(hf_home / "transformers"))
+    os.environ.setdefault("HF_HUB_DISABLE_XET", "1")
     dataset = load_dataset(args.dataset_name, split=args.split)
     instance_ids = load_instance_ids(Path(args.instance_file) if args.instance_file else None, args.instance_ids)
     if instance_ids:
@@ -128,8 +136,6 @@ def main() -> int:
     if len(dataset) == 0:
         raise SystemExit("No SWE-bench Lite instances selected.")
 
-    output_path = Path(args.output)
-    output_path.parent.mkdir(parents=True, exist_ok=True)
     existing_ids: set[str] = set()
     if output_path.exists():
         with output_path.open() as handle:
