@@ -208,30 +208,41 @@ def main() -> int:
         print("No refactor benchmark tasks selected.", file=sys.stderr)
         return 1
 
-    results = [
-        run_task(args.base_url, model, benchmark_root / task_id, args.max_tokens)
-        for task_id in tasks
-    ]
+    output_path = Path(args.output)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    results: list[dict] = []
+    print(f"Model: {model}")
+    for index, task_id in enumerate(tasks, start=1):
+        print(f"[{index}/{len(tasks)}] Running {task_id}", flush=True)
+        result = run_task(args.base_url, model, benchmark_root / task_id, args.max_tokens)
+        results.append(result)
+        passed = sum(1 for item in results if item["passed"])
+        summary = {
+            "base_url": args.base_url,
+            "model": model,
+            "task_count": len(tasks),
+            "completed": len(results),
+            "passed": passed,
+            "failed": len(results) - passed,
+            "results": results,
+        }
+        output_path.write_text(json.dumps(summary, indent=2))
+        status = "PASS" if result["passed"] else "FAIL"
+        print(f"{status} {result['task_id']}: {result['latency_seconds']:.2f}s", flush=True)
+        if not result["passed"] and result["stderr"]:
+            print(result["stderr"].strip(), flush=True)
+
     passed = sum(1 for result in results if result["passed"])
     summary = {
         "base_url": args.base_url,
         "model": model,
         "task_count": len(results),
+        "completed": len(results),
         "passed": passed,
         "failed": len(results) - passed,
         "results": results,
     }
-
-    output_path = Path(args.output)
-    output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(json.dumps(summary, indent=2))
-
-    print(f"Model: {model}")
-    for result in results:
-        status = "PASS" if result["passed"] else "FAIL"
-        print(f"{status} {result['task_id']}: {result['latency_seconds']:.2f}s")
-        if not result["passed"] and result["stderr"]:
-            print(result["stderr"].strip())
     print(f"Summary: {passed}/{len(results)} passed")
     print(f"Saved {output_path}")
     return 0 if passed == len(results) else 1
