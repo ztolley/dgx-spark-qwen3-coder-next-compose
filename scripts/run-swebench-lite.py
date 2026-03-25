@@ -122,10 +122,11 @@ def main() -> int:
     output_path.parent.mkdir(parents=True, exist_ok=True)
     hf_home = output_path.parent / ".hf-home"
     hf_home.mkdir(parents=True, exist_ok=True)
-    os.environ.setdefault("HF_HOME", str(hf_home))
-    os.environ.setdefault("HUGGINGFACE_HUB_CACHE", str(hf_home / "hub"))
-    os.environ.setdefault("TRANSFORMERS_CACHE", str(hf_home / "transformers"))
-    os.environ.setdefault("HF_HUB_DISABLE_XET", "1")
+    os.environ["HF_HOME"] = str(hf_home)
+    os.environ["HF_HUB_CACHE"] = str(hf_home / "hub")
+    os.environ["HUGGINGFACE_HUB_CACHE"] = str(hf_home / "hub")
+    os.environ["TRANSFORMERS_CACHE"] = str(hf_home / "transformers")
+    os.environ["HF_HUB_DISABLE_XET"] = "1"
     dataset = load_dataset(args.dataset_name, split=args.split)
     instance_ids = load_instance_ids(Path(args.instance_file) if args.instance_file else None, args.instance_ids)
     if instance_ids:
