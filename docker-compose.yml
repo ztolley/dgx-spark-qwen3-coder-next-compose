@@ -71,12 +71,15 @@ services:
       - "${MAIN_PORT:-30000}:30000"
     environment:
       <<: *common-hf-env
+      VLLM_MARLIN_USE_ATOMIC_ADD: ${MAIN_INT4_VLLM_MARLIN_USE_ATOMIC_ADD:-"1"}
+      VLLM_SLEEP_WHEN_IDLE: ${MAIN_INT4_VLLM_SLEEP_WHEN_IDLE:-"0"}
     volumes:
       - ${HOME}/.cache/huggingface:/root/.cache/huggingface
       - ${HOME}/.cache/vllm:/root/.cache/vllm
       - ${HOME}/.cache/flashinfer:/root/.cache/flashinfer
       - ${HOME}/.triton:/root/.triton
       - ./vllm-mods/fix-qwen3-coder-next:/opt/qwen3-coder-next-fix:ro
+      - ./vllm-mods/fix-qwen3-next-autoround:/opt/qwen3-next-autoround-fix:ro
       - /tmp:/tmp
     command:
       - bash
@@ -85,18 +88,26 @@ services:
         unset VLLM_BASE_DIR &&
         cd /opt/qwen3-coder-next-fix &&
         ./run.sh &&
+        cd /opt/qwen3-next-autoround-fix &&
+        ./run.sh &&
         exec vllm serve ${MAIN_INT4_MODEL:-Intel/Qwen3-Coder-Next-int4-AutoRound}
         --enable-auto-tool-choice
         --tool-call-parser qwen3_coder
-        --trust-remote-code
         --dtype bfloat16
-        --gpu-memory-utilization ${MAIN_INT4_GPU_MEMORY_UTILIZATION:-0.72}
+        --gpu-memory-utilization ${MAIN_INT4_GPU_MEMORY_UTILIZATION:-0.70}
         --host 0.0.0.0
         --port 30000
+        --load-format fastsafetensors
         --kv-cache-dtype fp8
         --attention-backend flashinfer
         --enable-prefix-caching
+        --enable-chunked-prefill
         --max-model-len ${MAIN_INT4_MAX_MODEL_LEN:-32768}
+        --max-num-seqs ${MAIN_INT4_MAX_NUM_SEQS:-128}
+        --max-num-batched-tokens ${MAIN_INT4_MAX_NUM_BATCHED_TOKENS:-16384}
+        --optimization-level ${MAIN_INT4_OPTIMIZATION_LEVEL:-3}
+        --performance-mode ${MAIN_INT4_PERFORMANCE_MODE:-throughput}
+        --mamba-cache-mode ${MAIN_INT4_MAMBA_CACHE_MODE:-align}
         --tensor-parallel-size ${MAIN_INT4_TP_SIZE:-1}
     healthcheck:
       test:
