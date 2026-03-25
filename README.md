@@ -18,7 +18,11 @@ If your priority is coding quality over raw speed, this is the best working setu
 - A tested `Continue` config example in [`configs/continue-config.yaml`](./configs/continue-config.yaml)
 - A tested `Cline` setup guide in [`configs/cline-openai-compatible.md`](./configs/cline-openai-compatible.md)
 - Helper scripts to build, smoke-test, benchmark, and inspect the stack
+- A `llama-benchy` wrapper for Spark Arena-style throughput checks
+- A small coding-quality evaluation harness for repeatable model comparisons
 - A deeper write-up of the decisions and validation work in [`docs/validation-and-decisions.md`](./docs/validation-and-decisions.md)
+- A Spark Arena follow-up analysis in [`docs/spark-arena-analysis.md`](./docs/spark-arena-analysis.md)
+- A comparison plan for `FP8` vs `INT4` in [`docs/fp8-vs-int4-comparison-plan.md`](./docs/fp8-vs-int4-comparison-plan.md)
 
 ## Tested Target
 
@@ -183,10 +187,15 @@ The full reasoning, compatibility notes, and measured comparisons live in [`docs
 - [`scripts/build-vllm-image.sh`](./scripts/build-vllm-image.sh): builds the tested Spark-tuned `vLLM` image
 - [`scripts/smoke-test.sh`](./scripts/smoke-test.sh): quick end-to-end validation
 - [`scripts/bench.sh`](./scripts/bench.sh): simple performance spot checks
+- [`scripts/bench-llama-benchy.sh`](./scripts/bench-llama-benchy.sh): Spark Arena-style benchmark wrapper
+- [`scripts/eval-quality.py`](./scripts/eval-quality.py): small coding-quality regression harness
 - [`scripts/system-snapshot.sh`](./scripts/system-snapshot.sh): runtime resource snapshot
+- [`evals/coding_tasks.json`](./evals/coding_tasks.json): task set used by the quality harness
 - [`configs/continue-config.yaml`](./configs/continue-config.yaml): example Continue config
 - [`configs/cline-openai-compatible.md`](./configs/cline-openai-compatible.md): Cline setup notes
 - [`docs/validation-and-decisions.md`](./docs/validation-and-decisions.md): technical notes and rationale
+- [`docs/spark-arena-analysis.md`](./docs/spark-arena-analysis.md): ecosystem analysis and recommendations
+- [`docs/fp8-vs-int4-comparison-plan.md`](./docs/fp8-vs-int4-comparison-plan.md): comparison and promotion criteria
 
 ## Caveats
 
